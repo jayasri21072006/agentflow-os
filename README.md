@@ -1,6 +1,15 @@
 # AgentFlow OS
 
-A React + Vite dashboard for routing AI-agent requests through an n8n workflow export.
+A sleek AI-agent command center built with React + Vite and routed through an n8n workflow export.
+
+![AgentFlow OS dashboard](screenshots/Screenshot%20(674).png)
+
+## Why this project stands out
+
+- Launch a polished AI dashboard in minutes
+- Route requests through a reusable n8n workflow
+- Keep the frontend and workflow export clean for GitHub sharing
+- Use simple environment-based configuration for webhook setup
 
 ## What is in this repository
 
