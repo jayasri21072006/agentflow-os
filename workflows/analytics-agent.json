@@ -1,0 +1,5 @@
+{
+  "name": "analytics-agent",
+  "description": "Placeholder workflow export for the analytics agent. Import your sanitized n8n workflow here.",
+  "nodes": []
+}

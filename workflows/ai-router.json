@@ -1,0 +1,683 @@
+﻿{
+  "name": "AI OS",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-router",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1648,
+        976
+      ],
+      "id": "baf5cab3-923d-44c6-9bd3-bbb80d1600d0",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=__REPLACE_WITH_GEMINI_API_KEY__",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Classify this query into exactly one word only.\\nChoose from: analytics, crm, meeting, project, comms, executive.\\nIf the query is about company overview, KPIs, strategy, performance summary, or needs multiple departments, classify as executive.\\nReply with the single word only. No punctuation. No explanation.\\n\\nQuery: {{$json.body.query}}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1424,
+        976
+      ],
+      "id": "2163768a-adaa-426a-8af4-75a7904b7693",
+      "name": "Gemini Classifier",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.candidates?.[0]?.content?.parts?.[0]?.text || \"\";\n\n// clean intent\nlet intent = raw.trim().toLowerCase().replace(/[^a-z]/g, '');\n\n// allowed intents\nconst allowed = [\"analytics\",\"crm\",\"meeting\",\"project\",\"comms\",\"executive\"];\n\n// fallback if not matching\nif (!allowed.includes(intent)) {\n  intent = \"analytics\";\n}\n\nreturn {\n  json: {\n    intent,\n    debug_raw: raw,\n    debug_cleaned: intent,\n    original_query: $('Webhook').item.json.body.query,\n    context: $('Webhook').item.json.body.context || ''\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        976
+      ],
+      "id": "ff693a63-02c2-4e24-9b18-f81309837cf3",
+      "name": "Trim Intent"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=__REPLACE_WITH_GEMINI_API_KEY__",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are an Analytics Agent. Analyze business metrics and return structured insights.\\n\\nRespond ONLY with valid JSON (no markdown, no backticks):\\n{\\n  \\\"summary\\\": \\\"one sentence summary\\\",\\n  \\\"insights\\\": [\\\"insight1\\\", \\\"insight2\\\"],\\n  \\\"anomalies\\\": [\\\"anomaly1\\\"],\\n  \\\"recommendations\\\": [\\\"rec1\\\", \\\"rec2\\\"],\\n  \\\"kpis\\\": {\\\"revenue_trend\\\": \\\"up/down/stable\\\", \\\"key_metric\\\": \\\"value\\\"}\\n}\\n\\nQuery: {{$('Webhook').item.json.body.query}}\\nContext: {{$('Webhook').item.json.body.context}}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -752,
+        400
+      ],
+      "id": "c97192ee-e15d-4e78-a45c-e93d844178fb",
+      "name": "Analytics Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseGemini(raw) {\n  try {\n    const m = raw.match(/```json\\n?([\\s\\S]*?)\\n?```/);\n    return m ? JSON.parse(m[1]) : JSON.parse(raw);\n  } catch(e) { return { raw_response: raw }; }\n}\nconst raw = $input.item.json.candidates[0].content.parts[0].text;\nreturn { json: { agent: 'analytics', status: 'success', timestamp: new Date().toISOString(), query: $('Webhook').item.json.body.query, result: parseGemini(raw) } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        400
+      ],
+      "id": "709798d5-05e0-471d-9514-e24c2c373cb9",
+      "name": "Format Analytics"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=__REPLACE_WITH_GEMINI_API_KEY__",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a CRM Agent. Monitor leads and sales pipeline.\\n\\nRespond ONLY with valid JSON (no markdown, no backticks):\\n{\\n  \\\"summary\\\": \\\"one sentence summary\\\",\\n  \\\"hot_leads\\\": [{\\\"name\\\": \\\"Lead\\\", \\\"score\\\": 85, \\\"action\\\": \\\"call today\\\"}],\\n  \\\"pipeline_health\\\": \\\"good/at-risk/critical\\\",\\n  \\\"conversion_rate\\\": \\\"percentage\\\",\\n  \\\"recommended_actions\\\": [\\\"action1\\\", \\\"action2\\\"]\\n}\\n\\nQuery: {{$('Webhook').item.json.body.query}}\\nContext: {{$('Webhook').item.json.body.context}}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -752,
+        592
+      ],
+      "id": "1ad45f84-d299-4ac2-9c35-e58e439ffbe5",
+      "name": "CRM Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseGemini(raw) {\n  try {\n    const m = raw.match(/```json\\n?([\\s\\S]*?)\\n?```/);\n    return m ? JSON.parse(m[1]) : JSON.parse(raw);\n  } catch(e) { return { raw_response: raw }; }\n}\nconst raw = $input.item.json.candidates[0].content.parts[0].text;\nreturn { json: { agent: 'crm', status: 'success', timestamp: new Date().toISOString(), query: $('Webhook').item.json.body.query, result: parseGemini(raw) } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        592
+      ],
+      "id": "c0e4016c-5bb4-44b2-9361-0cb001a7ce97",
+      "name": "Format CRM"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=__REPLACE_WITH_GEMINI_API_KEY__",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a Meeting Agent. Manage calendars and meeting logistics.\\n\\nRespond ONLY with valid JSON (no markdown, no backticks):\\n{\\n  \\\"summary\\\": \\\"one sentence summary\\\",\\n  \\\"conflicts\\\": [{\\\"time\\\": \\\"slot\\\", \\\"description\\\": \\\"conflict detail\\\"}],\\n  \\\"suggested_slots\\\": [\\\"Monday 2pm\\\", \\\"Tuesday 10am\\\"],\\n  \\\"action_items\\\": [\\\"item1\\\", \\\"item2\\\"],\\n  \\\"follow_ups\\\": [\\\"follow up 1\\\"]\\n}\\n\\nQuery: {{$('Webhook').item.json.body.query}}\\nContext: {{$('Webhook').item.json.body.context}}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -752,
+        784
+      ],
+      "id": "d104b736-b4b2-4c80-8cfa-1b0399ccece9",
+      "name": "Meeting Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseGemini(raw) {\n  try {\n    const m = raw.match(/```json\\n?([\\s\\S]*?)\\n?```/);\n    return m ? JSON.parse(m[1]) : JSON.parse(raw);\n  } catch(e) { return { raw_response: raw }; }\n}\nconst raw = $input.item.json.candidates[0].content.parts[0].text;\nreturn { json: { agent: 'meeting', status: 'success', timestamp: new Date().toISOString(), query: $('Webhook').item.json.body.query, result: parseGemini(raw) } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        784
+      ],
+      "id": "67e7cc64-89dd-4fb5-8f51-96ba1cc1a33e",
+      "name": "Format Meeting"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=__REPLACE_WITH_GEMINI_API_KEY__",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a Project Manager Agent. Track project health and delivery risks.\\n\\nRespond ONLY with valid JSON (no markdown, no backticks):\\n{\\n  \\\"summary\\\": \\\"one sentence summary\\\",\\n  \\\"at_risk_projects\\\": [{\\\"name\\\": \\\"Project\\\", \\\"risk\\\": \\\"reason\\\", \\\"days_delayed\\\": 0}],\\n  \\\"blockers\\\": [{\\\"project\\\": \\\"name\\\", \\\"blocker\\\": \\\"description\\\", \\\"severity\\\": \\\"high/med/low\\\"}],\\n  \\\"on_track_count\\\": 0,\\n  \\\"recommended_actions\\\": [\\\"action1\\\"]\\n}\\n\\nQuery: {{$('Webhook').item.json.body.query}}\\nContext: {{$('Webhook').item.json.body.context}}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -752,
+        976
+      ],
+      "id": "e38af0d8-ce15-4e16-8a7c-68027c50bef8",
+      "name": "Project Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseGemini(raw) {\n  try {\n    const m = raw.match(/```json\\n?([\\s\\S]*?)\\n?```/);\n    return m ? JSON.parse(m[1]) : JSON.parse(raw);\n  } catch(e) { return { raw_response: raw }; }\n}\nconst raw = $input.item.json.candidates[0].content.parts[0].text;\nreturn { json: { agent: 'project', status: 'success', timestamp: new Date().toISOString(), query: $('Webhook').item.json.body.query, result: parseGemini(raw) } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        976
+      ],
+      "id": "13b57722-852b-42c0-b1c9-4cb9133d3ac2",
+      "name": "Format Project"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=__REPLACE_WITH_GEMINI_API_KEY__",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a Communications Agent. Handle emails, Slack, and internal comms.\\n\\nRespond ONLY with valid JSON (no markdown, no backticks):\\n{\\n  \\\"summary\\\": \\\"one sentence summary\\\",\\n  \\\"draft_email\\\": {\\\"subject\\\": \\\"subject line\\\", \\\"body\\\": \\\"email body\\\"},\\n  \\\"escalations\\\": [{\\\"issue\\\": \\\"description\\\", \\\"urgency\\\": \\\"high/med/low\\\"}],\\n  \\\"weekly_update\\\": \\\"paragraph for leadership\\\",\\n  \\\"slack_summary\\\": \\\"key points from conversations\\\"\\n}\\n\\nQuery: {{$('Webhook').item.json.body.query}}\\nContext: {{$('Webhook').item.json.body.context}}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -752,
+        1168
+      ],
+      "id": "f6f5b52f-8a90-49f3-9df6-76a66e46d30c",
+      "name": "Comms Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseGemini(raw) {\n  try {\n    const m = raw.match(/```json\\n?([\\s\\S]*?)\\n?```/);\n    return m ? JSON.parse(m[1]) : JSON.parse(raw);\n  } catch(e) { return { raw_response: raw }; }\n}\nconst raw = $input.item.json.candidates[0].content.parts[0].text;\nreturn { json: { agent: 'comms', status: 'success', timestamp: new Date().toISOString(), query: $('Webhook').item.json.body.query, result: parseGemini(raw) } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        1168
+      ],
+      "id": "c8c8a5f3-002a-49cb-9212-810c4f36a206",
+      "name": "Format Comms"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=__REPLACE_WITH_GEMINI_API_KEY__",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are the Analytics sub-agent inside the Executive Agent pipeline.\\n\\nRespond ONLY with valid JSON (no markdown):\\n{\\n  \\\"revenue_trend\\\": \\\"up/down/stable\\\",\\n  \\\"top_metric\\\": \\\"key number or insight\\\",\\n  \\\"anomaly\\\": \\\"any anomaly or none\\\",\\n  \\\"summary\\\": \\\"one sentence for executive report\\\"\\n}\\n\\nQuery: {{$('Webhook').item.json.body.query}}\\nContext: {{$('Webhook').item.json.body.context}}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -752,
+        1360
+      ],
+      "id": "969c6828-3332-44b4-94aa-fbf236325a93",
+      "name": "Exec Analytics Sub-Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=__REPLACE_WITH_GEMINI_API_KEY__",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are the CRM sub-agent inside the Executive Agent pipeline.\\n\\nRespond ONLY with valid JSON (no markdown):\\n{\\n  \\\"pipeline_health\\\": \\\"good/at-risk/critical\\\",\\n  \\\"top_opportunity\\\": \\\"biggest deal or lead\\\",\\n  \\\"deals_at_risk\\\": 0,\\n  \\\"summary\\\": \\\"one sentence for executive report\\\"\\n}\\n\\nQuery: {{$('Webhook').item.json.body.query}}\\nContext: {{$('Webhook').item.json.body.context}}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -752,
+        1552
+      ],
+      "id": "a62608eb-63eb-4696-a693-7272add09e14",
+      "name": "Exec CRM Sub-Agent"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -304,
+        880
+      ],
+      "id": "7059c087-892e-44b1-8c58-7e70737d1769",
+      "name": "Respond Final"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -528,
+        1456
+      ],
+      "id": "840c207b-259d-4ba2-a60f-5872c9e09700",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.intent}}",
+                    "rightValue": "analytics",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "r1"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.intent}}",
+                    "rightValue": "crm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "r2"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.intent}}",
+                    "rightValue": "meeting",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "r3"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.intent}}",
+                    "rightValue": "project",
+                    "operator": {
+                      "type": "array",
+                      "operation": "contains",
+                      "rightType": "any"
+                    },
+                    "id": "r4"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.intent}}",
+                    "rightValue": "comms",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "r5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.intent}}",
+                    "rightValue": "executive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "r6"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -976,
+        912
+      ],
+      "id": "ac43a34d-bec0-4f77-aed7-e8952723d92d",
+      "name": "Switch Router",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Gemini Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Classifier": {
+      "main": [
+        [
+          {
+            "node": "Trim Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trim Intent": {
+      "main": [
+        [
+          {
+            "node": "Switch Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analytics Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Analytics": {
+      "main": [
+        [
+          {
+            "node": "Respond Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Agent": {
+      "main": [
+        [
+          {
+            "node": "Format CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format CRM": {
+      "main": [
+        [
+          {
+            "node": "Respond Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meeting Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Meeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Meeting": {
+      "main": [
+        [
+          {
+            "node": "Respond Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Project": {
+      "main": [
+        [
+          {
+            "node": "Respond Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comms Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Comms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Comms": {
+      "main": [
+        [
+          {
+            "node": "Respond Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exec Analytics Sub-Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exec CRM Sub-Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Respond Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Router": {
+      "main": [
+        [
+          {
+            "node": "Analytics Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meeting Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Project Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Comms Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Exec CRM Sub-Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Exec Analytics Sub-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Comms Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d6ecc7d5-1bda-4cf9-961e-ff08cba7afba",
+  "meta": {}, 
+  "nodeGroups": [],
+  "id": "6gyupcGgrpIHuJOr",
+  "tags": []
+}
