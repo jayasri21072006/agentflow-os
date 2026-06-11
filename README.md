@@ -2,7 +2,7 @@
 
 A sleek AI-agent command center built with React + Vite and routed through an n8n workflow export.
 
-![AgentFlow OS dashboard](screenshots/Screenshot%20(674).png)
+![AgentFlow OS dashboard](screenshots/Screenshot%20(675).png)
 
 ## Why this project stands out
 
@@ -23,22 +23,22 @@ This workspace currently contains:
 ## Current structure
 
 project-root/
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   ├── vite.config.js
-│   └── index.html
-├── workflows/
-│   └── ai-router.json
-├── docs/
-│   └── architecture.md
-├── screenshots/
-├── full_worflow.json
-├── .env.example
-├── .gitignore
-├── LICENSE
-└── README.md
+  frontend/
+    src/
+    public/
+    package.json
+    vite.config.js
+    index.html
+  workflows/
+    ai-router.json
+  docs/
+    architecture.md
+  screenshots/
+  full_worflow.json
+  .env.example
+  .gitignore
+  LICENSE
+  README.md
 
 ## Features
 
